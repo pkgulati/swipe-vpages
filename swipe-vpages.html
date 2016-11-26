@@ -14,16 +14,16 @@ container element based on iron pages to support vertical swipe
         <style>
             :host {
                 display: block;
-                position: relative;
                 overflow: hidden;
             }
             
             :host >::content > * {
-                position: absolute;
+                position: relative;
                 top: 0;
                 left: 0;
                 bottom: 0;
                 right: 0;
+                height : 100vh;
             }
             
             :host >::content >:not(.iron-selected):not(.next-item):not(.swipe-animating) {
