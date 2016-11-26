@@ -1,0 +1,226 @@
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../iron-resizable-behavior/iron-resizable-behavior.html">
+<link rel="import" href="../iron-selector/iron-selectable.html">
+
+<!--
+`swipe-vpages`
+container element based on iron pages to support vertical swipe 
+
+@demo demo/index.html 
+-->
+
+<dom-module id="swipe-vpages">
+    <template>
+        <style>
+            :host {
+                display: block;
+                position: relative;
+                overflow: hidden;
+            }
+            
+            :host >::content > * {
+                position: absolute;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                right: 0;
+            }
+            
+            :host >::content >:not(.iron-selected):not(.next-item):not(.swipe-animating) {
+                display: none !important;
+            }
+            
+            :host >::content > .swipe-animating {
+                pointer-events: none;
+            }
+            
+            :host >::content > .swipe-next {
+                pointer-events: none;
+            }
+
+        </style>
+
+        <content id="content"></content>
+    </template>
+
+</dom-module>
+
+<script>
+    (function() {
+
+        Polymer({
+
+            is: 'swipe-vpages',
+
+            behaviors: [
+                Polymer.IronResizableBehavior,
+                Polymer.IronSelectableBehavior
+            ],
+
+            properties: {
+
+                transitionTimingFunction: {
+                    type: String,
+                    //value: 'cubic-bezier(0.4, 0.0, 0.2, 1)'
+                    value: 'ease'
+                },
+                transitionDuration: {
+                    type: String,
+                    value: "800"
+                }
+
+            },
+            ready: function(e) {
+                // style will not be available here
+                this.zSwiping = 2;
+                this.zSelected = 1;
+                this.zNormal = 0;
+            },
+            attached: function(e) {
+                var zIndex = Number(this.getComputedStyleValue('z-index'));
+                this.zSwiping = zIndex + 2;
+                this.zSelected = zIndex + 1;
+                this.zNormal = zIndex;
+                this.select(0);
+            },
+            listeners: {
+                'iron-select': '_onIronSelect',
+                'track': '_onTrack',
+                'tap2': '_onTap'
+            },
+            _onTap: function(e) {
+                console.log('_onTap ', e.currentTarget.id, e.target.id);
+            },
+            _clearNextItem: function() {
+                if (this._nextItem) {
+                    this._nextItem.classList.remove('next-item');
+                    this._nextItem.style.zIndex = this.zNormal;
+                    this._nextItem = null;
+                }
+            },
+            _resetNextItem: function(up) {
+                if (up) {
+                    if (this.pos < this.items.length - 1) {
+                        this._nextItem = this.items[this.pos + 1];
+                    }
+                } else {
+                    if (this.pos > 0) {
+                        this._nextItem = this.items[this.pos - 1];
+                    }
+                }
+                if (this._nextItem) {
+                    this._nextItem.style.zIndex = this.zNormal;
+                    this._nextItem.classList.add('next-item');
+                }
+            },
+            _setNextItem: function(e) {
+                this._clearNextItem();
+                if (!this._nextItem) {
+                    var swipeUp = e.detail.dy <= 0 ? true : false;
+                    this._resetNextItem(swipeUp);
+                }
+            },
+            _clearTransitionSettings(page) {
+                if (page === this.selectedItem) {
+                    page.style.zIndex = this.zSelected;
+                } else {
+                    page.style.zIndex = this.zNormal;
+                }
+                page.style.transitionDuration = "0ms";
+                page.classList.remove('swipe-animating');
+                page.style.transform = "none";
+            },
+            _doTransition(page, dy) {
+                var a = this.items.indexOf(page);
+                var zIndex = Number(this.getComputedStyleValue('z-index'));
+                page.style.zIndex = this.zSwiping;
+                page.style.transitionDuration = Number(this.transitionDuration) + "ms";
+                page.style.transitionTimingFunction = this.transitionTimingFunction;
+                page.style.transform = "translateY(" + String(dy) + "px)";
+                page.classList.add('swipe-animating');
+                var b = page;
+                this.async(function() {
+                    this._clearTransitionSettings(b);
+                }, this.transitionDuration);
+    
+            },
+            // e.detai.y will be where touch happened, not used
+            // e.detail.dy will be total displacement
+            // e.detail.ddy will be displacement since last track
+            // e.currentTarget will be this swipe page 
+            // on click of already swiping
+            // e.detail.sourceEvent will be mouseEvent
+            // e.eventPhase will be 2 
+            // e.timeStamp will have timestamp
+            // 
+            _onTrack: function(e) {
+
+                var rect = this.selectedItem.getBoundingClientRect();
+                switch (e.detail.state) {
+                    case 'start':
+                        this.lastddy = 0;
+                        break;
+
+                    case 'track':
+
+                        this._setNextItem(e);
+
+                        this.selectedItem.style.zIndex = this.zSwiping;
+                        this.selectedItem.style.transitionDuration = "0ms";
+                        this.translate3d('0px', e.detail.dy + 'px', '0px', this.selectedItem);
+                        this.lastddy = e.detail.ddy;
+                        break;
+
+                    case 'end':
+      
+                        e.preventDefault();
+                        if ((Math.abs(this.lastddy) < 5) || (e.detail.dy > 0 && this.lastddy < 0) || (e.detail.dy < 0 && this.lastddy > 0)) {
+                            this._doTransition(this.selectedItem, 0);
+                            e.preventDefault();
+                            return;
+                        }
+
+                        var swipeUp = e.detail.dy < 0 ? true : false;
+
+                        //this._setNextItem(e);
+
+                        var myrect = this.getBoundingClientRect();
+                        var myheight = myrect.bottom - myrect.top;
+                        var oldPage = this.selectedItem;
+                        var dy = 0;
+                        if (swipeUp) {
+                            if (this.pos < this.items.length - 1) {
+                                dy = -myheight - 50;
+                                this.selectNext();
+                            }
+                        } else {
+                            if (this.pos > 0) {
+                                dy = myheight;
+                                this.selectPrevious();
+                            }
+                        }
+
+                        this._doTransition(oldPage, dy);
+
+                        break;
+                }
+            },
+            _onIronSelect: function(event) {
+
+                var selectedPage = event.detail.item;
+
+                // Only consider child elements.
+                var pos = this.items.indexOf(selectedPage);
+                if (pos < 0) {
+                    return;
+                }
+                this.pos = pos;
+
+                selectedPage.style.zIndex = this.zSelected;
+
+            }
+        });
+
+    })();
+
+</script>
