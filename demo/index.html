@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
-  <head>
+
+<head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
 
@@ -12,26 +13,45 @@
     <link rel="import" href="../../iron-demo-helpers/demo-snippet.html">
     <link rel="import" href="../swipe-vpages.html">
     <style is="custom-style" include="demo-pages-shared-styles">
+
+
     </style>
-  </head>
-  <body>
+</head>
+
+<body>
     <div class="vertical-section-container centered">
-      <h3>Basic swipe-vpages demo</h3>
-      <demo-snippet>
-        <template>
-          <style>
-              swipe-vpages {
-                  height : 300px;
-              }
-          </style>
-          <swipe-vpages>
-            <div style="background-color:#E67E22;"></div>  
-            <div style="background-color:#DAF7A6"></div>  
-            <div style="background-color:#00FFFF;"></div>  
-            <div style="background-color:#8A2BE2;"></div>  
-          </swipe-vpages>
-        </template>
-      </demo-snippet>
+        <h3>Basic swipe-vpages demo</h3>
+        <demo-snippet>
+            <template>
+                <style>
+                    .wrapper {
+                        height: 400px;
+                        overflow: hidden;
+                    }
+                    
+                    swipe-vpages {
+                        z-index: 20;
+                        background-color: royalblue;
+                    }
+                    
+                    swipe-vpages div {
+                        -moz-user-select: none;
+                        -webkit-user-select: none;
+                        -ms-user-select: none;
+                    }
+
+                </style>
+                <div class="wrapper">
+                    <swipe-vpages debug={{debug}}>
+                        <div id="d1" style="background-color:#E67E22;">d1</div>
+                        <div id="d2" style="background-color:#129999">d2</div>
+                        <div id="d3" style="background-color:#00FFFF;">d3</div>
+                        <div id="d4" style="background-color:#8A2BE2;">d4</div>
+                    </swipe-vpages>
+                </div>
+            </template>
+        </demo-snippet>
     </div>
-  </body>
+</body>
+
 </html>

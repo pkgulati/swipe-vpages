@@ -15,15 +15,17 @@ container element based on iron pages to support vertical swipe
             :host {
                 display: block;
                 overflow: hidden;
+                position: relative;
+                height: 100%;
             }
             
             :host >::content > * {
-                position: relative;
+                position: absolute;
                 top: 0;
                 left: 0;
                 bottom: 0;
+                height: 100%;
                 right: 0;
-                height : 100vh;
             }
             
             :host >::content >:not(.iron-selected):not(.next-item):not(.swipe-animating) {
@@ -142,7 +144,7 @@ container element based on iron pages to support vertical swipe
                 this.async(function() {
                     this._clearTransitionSettings(b);
                 }, this.transitionDuration);
-    
+
             },
             // e.detai.y will be where touch happened, not used
             // e.detail.dy will be total displacement
@@ -172,7 +174,7 @@ container element based on iron pages to support vertical swipe
                         break;
 
                     case 'end':
-      
+
                         e.preventDefault();
                         if ((Math.abs(this.lastddy) < 5) || (e.detail.dy > 0 && this.lastddy < 0) || (e.detail.dy < 0 && this.lastddy > 0)) {
                             this._doTransition(this.selectedItem, 0);
