@@ -64,11 +64,15 @@ container element based on iron pages to support vertical swipe
                 transitionTimingFunction: {
                     type: String,
                     //value: 'cubic-bezier(0.4, 0.0, 0.2, 1)'
-                    value: 'ease'
+                    value: 'linear'
                 },
                 transitionDuration: {
-                    type: String,
-                    value: "800"
+                    type: Number,
+                    value: 500
+                },
+                nextItem: {
+                    type: Object,
+                    observer: 'onNextItemChange'
                 }
 
             },
@@ -93,36 +97,39 @@ container element based on iron pages to support vertical swipe
             _onTap: function(e) {
                 console.log('_onTap ', e.currentTarget.id, e.target.id);
             },
-            _clearNextItem: function() {
-                if (this._nextItem) {
-                    this._nextItem.classList.remove('next-item');
-                    this._nextItem.style.zIndex = this.zNormal;
-                    this._nextItem = null;
+            onNextItemChange: function(newPage, oldPage) {
+                if (oldPage) {
+                    oldPage.classList.remove('next-item');
                 }
-            },
-            _resetNextItem: function(up) {
-                if (up) {
-                    if (this.pos < this.items.length - 1) {
-                        this._nextItem = this.items[this.pos + 1];
+                if (newPage) {
+                    if (newPage.trClearHandle) {
+                        this.cancelAsync(newPage.trClearHandle);
+                        delete newPage.trClearHandle;
+                        this._clearTransitionSettings(newPage);
                     }
-                } else {
-                    if (this.pos > 0) {
-                        this._nextItem = this.items[this.pos - 1];
-                    }
-                }
-                if (this._nextItem) {
-                    this._nextItem.style.zIndex = this.zNormal;
-                    this._nextItem.classList.add('next-item');
+                    newPage.style.zIndex = this.zNormal;
+                    newPage.classList.add('next-item');
                 }
             },
             _setNextItem: function(e) {
-                this._clearNextItem();
-                if (!this._nextItem) {
-                    var swipeUp = e.detail.dy <= 0 ? true : false;
-                    this._resetNextItem(swipeUp);
+                var swipeUp = e.detail.dy <= 0 ? true : false;
+                if (swipeUp) {
+                    if (this.pos < this.items.length - 1) {
+                        this.nextItem = this.items[this.pos + 1];
+                    } else {
+                        this.nextItem = undefined;
+                    }
+                } else {
+                    if (this.pos > 0) {
+                        this.nextItem = this.items[this.pos - 1];
+                    } else {
+                        this.nextItem = undefined;
+                    }
                 }
+
             },
             _clearTransitionSettings(page) {
+                console.log('_clearTransitionSettings');
                 if (page === this.selectedItem) {
                     page.style.zIndex = this.zSelected;
                 } else {
@@ -133,6 +140,12 @@ container element based on iron pages to support vertical swipe
                 page.style.transform = "none";
             },
             _doTransition(page, dy) {
+                console.log('_doTransition ', this.transitionDuration);
+                if (page.trClearHandle) {
+                    this.cancelAsync(page.trClearHandle);
+                    delete page.trClearHandle;
+                    this._clearTransitionSettings(page);
+                }
                 var a = this.items.indexOf(page);
                 var zIndex = Number(this.getComputedStyleValue('z-index'));
                 page.style.zIndex = this.zSwiping;
@@ -140,9 +153,8 @@ container element based on iron pages to support vertical swipe
                 page.style.transitionTimingFunction = this.transitionTimingFunction;
                 page.style.transform = "translateY(" + String(dy) + "px)";
                 page.classList.add('swipe-animating');
-                var b = page;
-                this.async(function() {
-                    this._clearTransitionSettings(b);
+                page.trClearHandle = this.async(function() {
+                    this._clearTransitionSettings(page);
                 }, this.transitionDuration);
 
             },
@@ -164,7 +176,7 @@ container element based on iron pages to support vertical swipe
                         break;
 
                     case 'track':
-
+                        //console.log('e.detail.dy ', e.detail.dy);
                         this._setNextItem(e);
 
                         this.selectedItem.style.zIndex = this.zSwiping;
