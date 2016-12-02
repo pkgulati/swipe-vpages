@@ -26,29 +26,27 @@ container element based on iron pages to support vertical swipe
                 bottom: 0;
                 height: 100%;
                 right: 0;
-                transform:none;
+                transform: none;
             }
             
             :host >::content >:not(.iron-selected):not(.swipe-next):not(.swipe-up):not(.swipe-down) {
                 display: none !important;
             }
             
+            :host >::content > .iron-selected {
+                border: 5px solid red;    
+            }
+            
             :host >::content > .swipe-up {
-                pointer-events: none; 
+                pointer-events: none;
             }
             
             :host >::content > .swipe-down {
-                pointer-events: none; 
-            }
-            
-/*
-            :host >::content > .swipe-restore {
                 pointer-events: none;
             }
-*/
-            
+ 
             :host >::content > .swipe-next {
-                pointer-events: none; 
+                pointer-events: none;
             }
 
         </style>
@@ -74,224 +72,290 @@ container element based on iron pages to support vertical swipe
 
                 transitionTimingFunction: {
                     type: String,
-                    //value: 'cubic-bezier(0.4, 0.0, 0.2, 1)'
-                    //value: 'ease-in-out'
-                    value : 'ease-in-out'
+                    //                    value: 'cubic-bezier(0.4, 0.0, 0.2, 1)'
+                    //value : 'cubic-bezier(0.42,0,0.58,1)'
+                    //value: 'ease-out'
+                    value: 'linear'
                 },
                 transitionDuration: {
                     type: Number,
-                    value: 2000
+                    value: 3500
                 },
                 nextItem: {
                     type: Object,
                     observer: 'onNextItemChange'
                 },
-                pages : {
-                    type : Array,
-                    value : []
+                uppages: {
+                    type: Array,
+                    value: []
+                },
+                downpages: {
+                    type: Array,
+                    value: []
                 }
             },
             ready: function(e) {
                 this.zIndex = 0;
                 this._swipeUp = true;
                 this.pos = -1;
+                this._upCount = 0;
+                this._downCount = 0;
             },
             attached: function(e) {
                 this.zIndex = Number(this.getComputedStyleValue('z-index'));
-                this.select(0);
+                this.select(5);
                 var rect = this.getBoundingClientRect();
                 this.height = rect.bottom - rect.top;
             },
             listeners: {
                 'iron-select': '_onIronSelect',
                 'track': '_onTrack',
-                'tap': '_onTap',
-                'transitionend' : '_onTransitionEnd'
+                'tap': '_onTap'
             },
-//            observers : [
-//                'pagesChanged(pages.splices)'    
-//            ],
-            _onTransitionEnd : function(e) {
-                var page = e.target;
-                console.log('_onTransitionEnd ', page.id);
-                var idx = this.pages.indexOf(page);
-                if (idx > -1) {
-                    this.splice('pages', idx, 1);
-                }
-                page.style.transitionDuration = "0ms";
-                page.style.transform= "none";
-                page.classList.remove('swipe-up');
+            returnToStart: function(page) {
+                console.log('returnToStart ', page.id);
+                page.style.transitionTimingFunction = self.transitionTimingFunction;
+                page.style.transitionDuration = Number(200) + "ms";
+                page.style.top = 0;
+                page.style.transform = "translateY(" + String(0) + "px)";
+            },
+            resetPage: function(page) {
+                console.log('resetPage ', page.id);
                 page.classList.remove('swipe-down');
+                page.classList.remove('swipe-up');
                 page.classList.remove('swipe-pause');
-                page.style.zIndex = this.zIndex - 1;
-                this.setlayers();
+                page.classList.remove('swipe-next');
+                page.style.transitionTimingFunction = self.transitionTimingFunction;
+                page.style.transitionDuration = Number(self.transitionDuration) + "ms";
+                page.style.top = 0;
+                page.style.transform = "translateY(" + String(0) + "px)";
+                page.style.zIndex = this.zIndex;
             },
-            setlayers : function() {
+            resetPages: function() {
+                console.log('resetPages ');
                 var self = this;
-                this.pages.forEach(function(page, idx) {
-                    page.style.zIndex = self.zIndex + idx + 1;
+                self.uppages.forEach(function(page, idx) {
+                    self.resetPage(page);
                 });
-                this.selectedItem.style.zIndex = this.zIndex;
-            },
-            doTransitions :  function() {
-                var self = this;
-                var idx = this.pages.indexOf(self.selectedItem);
-                if (idx > -1) {
-                    this.splice('pages', idx, 1);
-                }
-                this.pages.forEach(function(page, idx) {
-                    var rect = self.selectedItem.getBoundingClientRect();
-                    page.style.transitionTimingFunction = self.transitionTimingFunction;
-                    page.style.top = 0;
-                    page.style.transitionDuration = Number(self.transitionDuration) + "ms";
-                    var tr;
-                    if (self.swipeDirection === 'up') { 
-                        tr = "translateY(" + String(-self.height) + "px)";
-                    } else if (self.swipeDirection === 'down'){
-                        tr = "translateY(" +  String(self.height) + "px)";
-                    } else {
-                       tr = "translateY(0px)";
-                    }
-                    console.log('page ', page.id, tr);
-                    page.style.transform = tr;
+                self.downpages.forEach(function(page, idx) {
+                    self.resetPage(page);
                 });
-                console.log('selected restore ', this.selectedItem.id);
-                var page = self.selectedItem;
-                if (page) {
-                    page.classList.remove('swipe-down');
-                    page.classList.remove('swipe-up');
-                    page.classList.remove('swipe-pause');
-                    page.classList.remove('swipe-next');
-                    var rect = self.selectedItem.getBoundingClientRect();
-                    page.style.transitionTimingFunction = self.transitionTimingFunction;
-                    page.style.transitionDuration = Number(self.transitionDuration) + "ms";
-                    page.style.top = 0;
-                    page.style.transform = "translateY(" + String(0) + "px)";
-                }
+                this.selectedItem.style.zIndex = this.zIndex
+                //self.restorePage(page);
+                self.uppages = [];
+                self.downpages = [];
             },
-            cancelTransition : function(e) {
-                console.log('cancelTransition');
-            },
+            cancelTransition: function(e) {},
             _onTap: function(e) {
-                console.log('_onTap ', e.currentTarget.id, e.target);
+                //console.log('_onTap ', e.currentTarget.id, e.target);
             },
-            getZIndex : function(el){
+            getZIndex: function(el) {
                 return window.getComputedStyle(el, null).getPropertyValue('z-index');
             },
-            _onTrack: function(e) {
-
-                console.log('_onTrack ', e.detail.state, e.target.id, e.detail.dy, e.detail.ddy);
-        
-                var page = e.target;
-                // TODO if already moving 
-                var rect = page.getBoundingClientRect();
-                var pos = this.items.indexOf(page);
-                if (pos < 0) {
-                    return;
-                }
-                
-                
-                switch (e.detail.state) {
-                    case 'start':
-                        this._lastddy = 0;
-                        break;
-
-                    case 'track':
-                       
-                        if (e.detail.dy < 0) {
-                            this._swipeUp = true;
-                            if (pos < this.items.length - 1) {
-                                this.items[pos+1].classList.add('swipe-next');
-                            }
-                            if (pos > 0) {
-                                this.items[pos-1].classList.remove('swipe-next');
-                            }
-                        } else if (e.detail.dy > 0) {
-                            this._swipeUp = false;
-                            if (pos < this.items.length - 1) {
-                                this.items[pos+1].classList.remove('swipe-next');
-                            }
-                            if (pos > 0) {
-                                this.items[pos-1].classList.add('swipe-next');
-                            }
-                        }
-                        this.setlayers();
-                        
-                        this._lastddy = e.detail.ddy;
-                        var rect = page.getBoundingClientRect();
-                        
-                        page.style.transitionDuration = "0ms";
-                        page.style.transform = "translateY(" + String(e.detail.dy) + "px)";
-                        page.style.transitionTimingFunction = this.transitionTimingFunction;
-                        
-                        //page.style.top = rect.top + e.detail.ddy + "px";
-                        
-                        break;
-
-                    case 'end':
-                        
-                        page.style.top = 0;
-                        if (this._lastddy > -1 && this._lastddy < 1) {
-                            
-                        } else if (this._lastddy < 0)  {
-                            if (this.pos < this.items.length - 1) {
-                                this.swipeDirection = 'up';
-                                this.addPage(page);
-                                page.classList.add('swipe-up');
-                                this.selectNext();
-                            } 
-                        }
-                        else if (this._lastddy > 0) {
-                            if (this.pos > 0) {
-                                if (page === this.selectedItem) {
-                                    this.addPage(page);
-                                    this.selectPrevious();
-                                    this.swipeDirection = 'down';
-                                    page.classList.add('swipe-down');
-                                    this.addPage(page);
-                                }
-                            } 
-                        }
-                        this.setlayers();
-                        this.doTransitions();
-                        e.preventDefault();
-                       
-                        break;
+            showNextPage: function(e) {
+                var pos = this.pos;
+                // TODO shall we check in both up and down pages
+                if (e.detail.dy < 0) {
+                    if (pos < this.items.length - 1) {
+                        var nextPage = this.items[pos + 1];
+                        //if (this.uppages.indexOf(nextPage) === -1) {
+                            nextPage.classList.add('swipe-next');
+                            nextPage.style.zIndex = this.zIndex - 1;
+                        console.log('nextPage ', nextPage.id);
+                        //}
+                    }
+                    if (pos > 0) {
+                        var prevPage = this.items[pos - 1];
+                        //if (this.uppages.indexOf(prevPage) === -1) {
+                            prevPage.classList.remove('swipe-next');
+                            prevPage.style.zIndex = this.zIndex - 2;
+                        //}
+                    }
+                } else if (e.detail.dy > 0) {
+                    if (pos < this.items.length - 1) {
+                        var nextPage = this.items[pos + 1];
+                        //if (this.downpages.indexOf(nextPage) === -1) {
+                            nextPage.classList.remove('swipe-next');
+                            nextPage.style.zIndex = this.zIndex - 2;
+                        //}
+                    }
+                    if (pos > 0) {
+                        var prevPage = this.items[pos - 1];
+                        //if (this.downpages.indexOf(prevPage) === -1) {
+                            prevPage.classList.add('swipe-next');
+                        console.log('prevPage ', prevPage.id);
+                            prevPage.style.zIndex = this.zIndex - 1;
+                        //}
+                    }
                 }
             },
-            addPage : function(page) {
-                if (this.pages.indexOf(page) > -1) {
+           
+            pageUp: function(page) {
+                if (this.uppages.indexOf(page) > -1) {
                     return;
                 }
+                this.swipeDirection = 'up';
+                page.classList.add('swipe-up');
+                console.log('already uppages length ', this.uppages.length);
                 var startPos = -1;
                 var pos = this.items.indexOf(page) || 0;
-                if (this.pages.length === 0) {
-                    startPos = this.items.indexOf(this.pages[0]);
+                if (this.uppages.length === 0) {
+                    startPos = this.items.indexOf(this.uppages[0]);
                 }
                 if (pos < startPos) {
-                    this.pages.unshift(page);
+                    this.uppages.unshift(page);
                 } else {
-                    this.pages.push(page);
+                    this.uppages.push(page);
                 }
+                var self = this;
+                var l = this.items.length;
+                this.uppages.forEach(function(page, idx) {
+                    console.log('page up set zindex ', page.id, self.zIndex + l - idx);
+                    page.style.zIndex = self.zIndex + l - idx;
+                });
+                this.selectNext();
+                
+                page.style.transitionTimingFunction = self.transitionTimingFunction;
+                page.style.transitionDuration = Number(self.transitionDuration) + "ms";
+                var tr = "translateY(" + String(-self.height) + "px)";
+                page.style.transform = tr;
+                self.debounce('resetpages', function() {
+                    console.log('reset');
+                    self.resetPages();
+                }, self.transitionDuration+20);
+            },
+            pageDown: function(page) {
+                if (this.downpages.indexOf(page) > -1) {
+                    return;
+                }
+                this.swipeDirection = 'down';
+                page.classList.add('swipe-down');
+                var startPos = -1;
+                var pos = this.items.indexOf(page) || 0;
+                if (this.downpages.length === 0) {
+                    startPos = this.items.indexOf(this.downpages[0]);
+                }
+                if (pos < startPos) {
+                    this.downpages.unshift(page);
+                } else {
+                    this.downpages.push(page);
+                }
+                var self = this;
+                this.selectPrevious();
+                var l = this.items.length;
+                this.downpages.forEach(function(page, idx) {
+                    console.log('set zinde ', page.id, self.zIndex + l - idx);
+                    page.style.zIndex = self.zIndex + l - idx;
+                });
+                page.style.transitionTimingFunction = self.transitionTimingFunction;
+                page.style.transitionDuration = Number(self.transitionDuration) + "ms";
+                var tr = "translateY(" + String(self.height) + "px)";
+                page.style.transform = tr;
+                console.log('page tr ', page.id, tr);
+                self.debounce('resetpages', function() {
+                    console.log('reset');
+                    self.resetPages();
+                }, self.transitionDuration);
             },
             _onIronSelect: function(event) {
                 if (this.pos > -1) {
                     if (this.pos < this.items.length - 1) {
-                        this.items[this.pos+1].classList.remove('swipe-next');
+                        this.items[this.pos + 1].classList.remove('swipe-next');
                     }
                     if (this.pos > 0) {
-                        this.items[this.pos-1].classList.remove('swipe-next');
+                        this.items[this.pos - 1].classList.remove('swipe-next');
                     }
                 }
-                
                 var page = event.detail.item;
+                console.log('selected page changed ', page.id);
                 var pos = this.items.indexOf(page);
                 if (pos < 0) {
                     return;
                 }
-                
                 this.pos = pos;
-                this.setlayers();
+                //this.selectedItem.style.zIndex = this.zIndex;
+                //console.log('set zindex ', this.selectedItem.id, this.zIndex);
+            },
+             _onTrack: function(e) {
+                var page = e.target;
+                var rect = page.getBoundingClientRect();
+                if (page !== this.selectedItem) {
+                    return;
+                }
+                switch (e.detail.state) {
+                    case 'start':
+                        //console.log('start ', e.target.id, e.detail.dy, e.detail.ddy);
+                        if (page.id == 'd3') {
+                            console.log('break;');
+                        }
+                        this._lastddy = 0;
+                        this._totaly = 0;
+                        this._lastts = e.timeStamp;
+                        this._up = 0;
+                        this._down = 0;
+                        break;
+
+                    case 'track':
+
+                       // console.log('page id ', page.id, this.pos);
+                        //this.showNextPage(e);
+
+                        if (e.detail.ddy < 0) {
+                            this._up += -e.detail.ddy;
+                        } else {
+                            this._down += e.detail.ddy;
+                        }
+
+                        // Opposite movement 
+                        if (e.detail.ddy * this._lastddy < 0) {
+                            console.log('opposite ');
+                            this._up = 0;
+                            this._down = 0;
+                            this._totaly = 0;
+                        }
+                        if ((e.timeStamp - this._lastts) > 30) {
+                            console.log('hold ');
+                            this._up = 0;
+                            this._down = 0;
+                            this._totaly = 0;
+                        }
+                        if (e.detail.ddy === 0) {
+                            return;
+                        }
+                        this._lastts = e.timeStamp;
+                        this._totaly += e.detail.ddy;
+                        this._lastts = e.timeStamp;
+                        page.style.transitionDuration = "0ms";
+                        page.style.transitionTimingFunction = 'ease-in';
+                        page.style.transform = "translateY(" + String(e.detail.dy) + "px)";
+                        break;
+
+                    case 'end':
+
+                        this._lastts = this._lastts || e.timeStamp;
+                        //console.log('end of page ', page.id, this._up, this._down);
+                        if (Math.abs(this._up - this._down) < 5) {
+                            this.returnToStart(page);
+                        } else if (this._up > 0) {
+                            if (this.pos < this.items.length - 1) {
+                                this.pageUp(page);
+                            } else {
+                                console.log('no next page so restore');
+                                this.returnToStart(page);
+                            }
+                        } else {
+                            if (this.pos > 0) {
+                                console.log('swipe down');
+                                this.pageDown(page);
+                 
+                            } else {
+                                console.log('no prev page so restore');
+                                this.returnToStart(page);
+                            }
+                        }
+                        e.preventDefault();
+                        break;
+                }
             }
         });
 
