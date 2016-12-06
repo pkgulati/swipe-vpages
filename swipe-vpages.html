@@ -33,7 +33,6 @@ container element based on iron pages to support vertical swipe
             }
             
             :host >::content > .iron-selected {
-                border: 5px solid red;    
             }
             
             :host >::content > .swipe-up {
@@ -78,7 +77,11 @@ container element based on iron pages to support vertical swipe
                 },
                 transitionDuration: {
                     type: Number,
-                    value: 3500
+                    value: 200
+                },
+                 holdDelay: {
+                    type: Number,
+                    value: 60
                 },
                 nextItem: {
                     type: Object,
@@ -276,7 +279,7 @@ container element based on iron pages to support vertical swipe
                         }
                         //console.log('tdiff ', e.timeStamp - this._lastts);
                         // if holds reset _up, _down
-                        if ((e.timeStamp - this._lastts) > 100) {
+                        if ((e.timeStamp - this._lastts) > this.holdDelay) {
                             console.log('hold ');
                             this._up = 0;
                             this._down = 0;
@@ -287,7 +290,7 @@ container element based on iron pages to support vertical swipe
                         } else {
                             this._down += e.detail.ddy;
                         }
-                        console.log('track ', this._up, this._down, e.timeStamp);
+                        console.log('track ', this._up, this._down, e.timeStamp - this._lastts);
                         this._lastts = e.timeStamp;
                         
                         if (e.detail.ddy === 0) {
@@ -315,9 +318,8 @@ container element based on iron pages to support vertical swipe
 
                     case 'end':
 
-                        console.log('end of swipe ', page.id, this._up, this._down, e.timeStamp);
-                        console.log('tdiff ', e.timeStamp - this._lastts);
-                        
+                        console.log('end of swipe ', page.id, this._up, this._down, e.timeStamp - this._lastts);
+                      
                         // if holds reset _up, _down
                         this._lastts = this._lastts || e.timeStamp;
                         page.style.transitionTimingFunction = 'ease-in';
@@ -329,7 +331,7 @@ container element based on iron pages to support vertical swipe
                                 this.returnToStart(prevPage);
                             } 
                             this.returnToStart(page);   
-                        } else if ((e.timeStamp - this._lastts) > 100) {
+                        } else if ((e.timeStamp - this._lastts) > this.holdDelay) {
                             console.log('final hold ');
                              if (this.pos > 0) {
                                 var prevPage = this.items[this.pos - 1];
