@@ -21,15 +21,14 @@ container element based on iron pages to support vertical swipe
             
             :host >::content > * {
                 position: absolute;
-                top: 0;
+                top:0;
                 left: 0;
                 bottom: 0;
                 height: 100%;
                 right: 0;
-                transform: none;
             }
             
-            :host >::content >:not(.iron-selected):not(.swipe-next):not(.swipe-up):not(.swipe-down) {
+            :host >::content >:not(.iron-selected):not(.swipe-next):not(.swipe-page) {
                 display: none !important;
             }
             
@@ -85,11 +84,7 @@ container element based on iron pages to support vertical swipe
                     type: Object,
                     observer: 'onNextItemChange'
                 },
-                uppages: {
-                    type: Array,
-                    value: []
-                },
-                downpages: {
+                pages: {
                     type: Array,
                     value: []
                 }
@@ -103,47 +98,49 @@ container element based on iron pages to support vertical swipe
             },
             attached: function(e) {
                 this.zIndex = Number(this.getComputedStyleValue('z-index'));
-                this.select(5);
                 var rect = this.getBoundingClientRect();
                 this.height = rect.bottom - rect.top;
+                var self = this;
+                this.items.forEach(function(page, pos) {
+                    page.style.zIndex = self.zIndex - pos;
+                    if (pos < 5) {
+                      page.style.transitionDuration = 0 + "ms";
+                      page.style.transform = "translateY(" + String(-this.height) + "px)";
+                    }
+                });
+                this.select(5);
             },
             listeners: {
                 'iron-select': '_onIronSelect',
                 'track': '_onTrack',
+                'down' : '_onDown',
                 'tap': '_onTap'
             },
             returnToStart: function(page) {
                 console.log('returnToStart ', page.id);
                 page.style.transitionTimingFunction = self.transitionTimingFunction;
                 page.style.transitionDuration = Number(200) + "ms";
-                page.style.top = 0;
-                page.style.transform = "translateY(" + String(0) + "px)";
+                var pos = this.items.indexOf(page);
+                if (pos < this.pos) {
+                    page.style.transform = "translateY(" + String(-this.height) + "px)";
+                } else {
+                    page.style.transform = "translateY(" + String(0) + "px)";
+                }
             },
             resetPage: function(page) {
                 console.log('resetPage ', page.id);
-                page.classList.remove('swipe-down');
-                page.classList.remove('swipe-up');
-                page.classList.remove('swipe-pause');
-                page.classList.remove('swipe-next');
                 page.style.transitionTimingFunction = self.transitionTimingFunction;
-                page.style.transitionDuration = Number(self.transitionDuration) + "ms";
-                page.style.top = 0;
+                page.style.transitionDuration = "0ms";
                 page.style.transform = "translateY(" + String(0) + "px)";
-                page.style.zIndex = this.zIndex;
+                page.classList.remove('swipe-page');
+                page.classList.remove('swipe-next');
+                //page.style.zIndex = this.zIndex;
             },
             resetPages: function() {
-                console.log('resetPages ');
                 var self = this;
-                self.uppages.forEach(function(page, idx) {
-                    self.resetPage(page);
-                });
-                self.downpages.forEach(function(page, idx) {
-                    self.resetPage(page);
-                });
-                this.selectedItem.style.zIndex = this.zIndex
-                //self.restorePage(page);
-                self.uppages = [];
-                self.downpages = [];
+//                self.pages.forEach(function(page, idx) {
+//                    self.resetPage(page);
+//                });
             },
             cancelTransition: function(e) {},
             _onTap: function(e) {
@@ -152,205 +149,210 @@ container element based on iron pages to support vertical swipe
             getZIndex: function(el) {
                 return window.getComputedStyle(el, null).getPropertyValue('z-index');
             },
-            showNextPage: function(e) {
+            _onDown : function(e) {
+                //console.log('on down ');
+                this.items.forEach(function(page, pos) {
+                    var rect = page.getBoundingClientRect();
+                    //console.log('page ', page.id, page.swipey, rect.top);
+                });
+            },
+            showNextPage: function(pos) {
+                if (pos < this.items.length - 1) {
+                    var nextPage = this.items[pos + 1];
+                    nextPage.classList.add('swipe-next');
+                }
+                if (pos > 0) {
+                    var prevPage = this.items[pos - 1];
+                    prevPage.classList.remove('swipe-next');
+                }
+            },
+            showPreviousPage:function(pos) {
                 var pos = this.pos;
-                // TODO shall we check in both up and down pages
-                if (e.detail.dy < 0) {
-                    if (pos < this.items.length - 1) {
-                        var nextPage = this.items[pos + 1];
-                        //if (this.uppages.indexOf(nextPage) === -1) {
-                            nextPage.classList.add('swipe-next');
-                            nextPage.style.zIndex = this.zIndex - 1;
-                        console.log('nextPage ', nextPage.id);
-                        //}
-                    }
-                    if (pos > 0) {
-                        var prevPage = this.items[pos - 1];
-                        //if (this.uppages.indexOf(prevPage) === -1) {
-                            prevPage.classList.remove('swipe-next');
-                            prevPage.style.zIndex = this.zIndex - 2;
-                        //}
-                    }
-                } else if (e.detail.dy > 0) {
-                    if (pos < this.items.length - 1) {
-                        var nextPage = this.items[pos + 1];
-                        //if (this.downpages.indexOf(nextPage) === -1) {
-                            nextPage.classList.remove('swipe-next');
-                            nextPage.style.zIndex = this.zIndex - 2;
-                        //}
-                    }
-                    if (pos > 0) {
-                        var prevPage = this.items[pos - 1];
-                        //if (this.downpages.indexOf(prevPage) === -1) {
-                            prevPage.classList.add('swipe-next');
-                        console.log('prevPage ', prevPage.id);
-                            prevPage.style.zIndex = this.zIndex - 1;
-                        //}
-                    }
+                if (pos < this.items.length - 1) {
+                    var nextPage = this.items[pos + 1];
+                    nextPage.classList.remove('swipe-next');
                 }
-            },
-           
-            pageUp: function(page) {
-                if (this.uppages.indexOf(page) > -1) {
-                    return;
+                if (pos > 0) {
+                    var prevPage = this.items[pos - 1];
+                    prevPage.classList.add('swipe-next');
                 }
-                this.swipeDirection = 'up';
-                page.classList.add('swipe-up');
-                console.log('already uppages length ', this.uppages.length);
-                var startPos = -1;
-                var pos = this.items.indexOf(page) || 0;
-                if (this.uppages.length === 0) {
-                    startPos = this.items.indexOf(this.uppages[0]);
-                }
-                if (pos < startPos) {
-                    this.uppages.unshift(page);
-                } else {
-                    this.uppages.push(page);
-                }
-                var self = this;
-                var l = this.items.length;
-                this.uppages.forEach(function(page, idx) {
-                    console.log('page up set zindex ', page.id, self.zIndex + l - idx);
-                    page.style.zIndex = self.zIndex + l - idx;
-                });
-                this.selectNext();
-                
-                page.style.transitionTimingFunction = self.transitionTimingFunction;
-                page.style.transitionDuration = Number(self.transitionDuration) + "ms";
-                var tr = "translateY(" + String(-self.height) + "px)";
-                page.style.transform = tr;
-                self.debounce('resetpages', function() {
-                    console.log('reset');
-                    self.resetPages();
-                }, self.transitionDuration+20);
-            },
-            pageDown: function(page) {
-                if (this.downpages.indexOf(page) > -1) {
-                    return;
-                }
-                this.swipeDirection = 'down';
-                page.classList.add('swipe-down');
-                var startPos = -1;
-                var pos = this.items.indexOf(page) || 0;
-                if (this.downpages.length === 0) {
-                    startPos = this.items.indexOf(this.downpages[0]);
-                }
-                if (pos < startPos) {
-                    this.downpages.unshift(page);
-                } else {
-                    this.downpages.push(page);
-                }
-                var self = this;
-                this.selectPrevious();
-                var l = this.items.length;
-                this.downpages.forEach(function(page, idx) {
-                    console.log('set zinde ', page.id, self.zIndex + l - idx);
-                    page.style.zIndex = self.zIndex + l - idx;
-                });
-                page.style.transitionTimingFunction = self.transitionTimingFunction;
-                page.style.transitionDuration = Number(self.transitionDuration) + "ms";
-                var tr = "translateY(" + String(self.height) + "px)";
-                page.style.transform = tr;
-                console.log('page tr ', page.id, tr);
-                self.debounce('resetpages', function() {
-                    console.log('reset');
-                    self.resetPages();
-                }, self.transitionDuration);
             },
             _onIronSelect: function(event) {
-                if (this.pos > -1) {
-                    if (this.pos < this.items.length - 1) {
-                        this.items[this.pos + 1].classList.remove('swipe-next');
-                    }
-                    if (this.pos > 0) {
-                        this.items[this.pos - 1].classList.remove('swipe-next');
-                    }
-                }
                 var page = event.detail.item;
                 console.log('selected page changed ', page.id);
                 var pos = this.items.indexOf(page);
                 if (pos < 0) {
                     return;
                 }
-                this.pos = pos;
-                //this.selectedItem.style.zIndex = this.zIndex;
-                //console.log('set zindex ', this.selectedItem.id, this.zIndex);
-            },
-             _onTrack: function(e) {
-                var page = e.target;
-                var rect = page.getBoundingClientRect();
-                if (page !== this.selectedItem) {
-                    return;
+                if (this.pos !== 1) {
+                    // TODO remove swipe page class
                 }
+                this.pos = pos;
+                this.swipeDown(page);
+                console.log('swipe down ', page.id);
+                // TODO remove swipe-next class from other pages
+                //page.style.zIndex = this.zIndex - pos;
+                /*if (pos < this.items.length - 1) {
+                    var nextPage = this.items[pos + 1];
+                    nextPage.classList.add('swipe-next');
+                } */
+                var self = this;
+                if (pos > 0) {
+                    var prevPage = this.items[pos - 1];
+                    console.log('swipe up ', prevPage.id);
+                    prevPage.classList.remove('swipe-next');
+                    this.swipeUp(prevPage);
+                }
+                if (pos < this.items.length - 1) {
+                    var nextPage = this.items[pos + 1];
+                    console.log('swipe down ', nextPage.id);
+                    this.swipeDown(nextPage);
+                }
+            },
+            addPage : function(page) {
+                this.push('pages', page);
+                page.classList.add('swipe-page');
+            },
+            swipeUp : function(page) {
+                page.style.transitionDuration = this.transitionDuration + "ms";
+                page.style.transform = "translateY(" + String(-this.height) + "px)";
+                var self = this;
+                self.debounce('resetpages', function() {
+                    self.resetPages();
+                }, self.transitionDuration+20);
+            },
+            swipeDown : function(page) {
+                page.style.transitionDuration = this.transitionDuration + "ms";
+                page.style.transform = "translateY(0px)";
+                var self = this;
+                self.debounce('resetpages', function() {
+                    self.resetPages();
+                }, self.transitionDuration+20);
+            },
+            _onTrack: function(e) {
+                var page = this.selectedItem;
+               
+                //console.log('swipe ' , page.id, e.detail.state, e.detail.dy, e.detail.ddy);
                 switch (e.detail.state) {
                     case 'start':
-                        //console.log('start ', e.target.id, e.detail.dy, e.detail.ddy);
-                        if (page.id == 'd3') {
-                            console.log('break;');
-                        }
+                        
                         this._lastddy = 0;
-                        this._totaly = 0;
                         this._lastts = e.timeStamp;
                         this._up = 0;
                         this._down = 0;
+                        if (e.detail.dy < 0) {
+                            this._up += -e.detail.dy;
+                        } else {
+                            this._down += e.detail.dy;
+                        }
+                        var rect1 = this.getBoundingClientRect();
+                        var rect2 = page.getBoundingClientRect();
+                        if (e.detail.dy < 0) {
+                            this.showNextPage(this.pos);
+                            page.swipey = rect2.top - rect1.top;
+                            page.style.transitionDuration = "0ms";
+                            page.style.transform = "translateY(" + String(page.swipey) + "px)";
+                        } else if (e.detail.dy > 0) {
+                            this.showPreviousPage(this.pos);
+                            if (this.pos > 0) {
+                                 var prevPage = this.items[this.pos - 1];
+                                 prevPage.swipey = - this.height + e.detail.dy;
+                                 prevPage.classList.add('swipe-next');
+                                 prevPage.classList.add('swipe-page');
+                                 prevPage.style.transitionDuration = "0ms";
+                                 prevPage.style.transform = "translateY(" + String(prevPage.swipey) + "px)";
+                            }
+                        }
+                        
                         break;
 
                     case 'track':
 
-                       // console.log('page id ', page.id, this.pos);
-                        //this.showNextPage(e);
-
+                        
+                        // if swipe in opposite dir reset _up, _down
+                        if (e.detail.ddy * this._lastddy < 0) {
+                            this._up = 0;
+                            this._down = 0;
+                        }
+                        //console.log('tdiff ', e.timeStamp - this._lastts);
+                        // if holds reset _up, _down
+                        if ((e.timeStamp - this._lastts) > 100) {
+                            console.log('hold ');
+                            this._up = 0;
+                            this._down = 0;
+                        }
+                        
                         if (e.detail.ddy < 0) {
                             this._up += -e.detail.ddy;
                         } else {
                             this._down += e.detail.ddy;
                         }
-
-                        // Opposite movement 
-                        if (e.detail.ddy * this._lastddy < 0) {
-                            console.log('opposite ');
-                            this._up = 0;
-                            this._down = 0;
-                            this._totaly = 0;
-                        }
-                        if ((e.timeStamp - this._lastts) > 30) {
-                            console.log('hold ');
-                            this._up = 0;
-                            this._down = 0;
-                            this._totaly = 0;
-                        }
+                        console.log('track ', this._up, this._down, e.timeStamp);
+                        this._lastts = e.timeStamp;
+                        
                         if (e.detail.ddy === 0) {
                             return;
                         }
-                        this._lastts = e.timeStamp;
-                        this._totaly += e.detail.ddy;
-                        this._lastts = e.timeStamp;
-                        page.style.transitionDuration = "0ms";
-                        page.style.transitionTimingFunction = 'ease-in';
-                        page.style.transform = "translateY(" + String(e.detail.dy) + "px)";
+                        if (e.detail.dy < 0) {
+                            page.swipey += e.detail.ddy;
+                            this.showNextPage(this.pos);
+                            page.style.transitionDuration = "0ms";
+                            page.style.transform = "translateY(" + String(page.swipey) + "px)";
+                        } else if (e.detail.dy > 0) {
+                            this.showPreviousPage(this.pos);
+                            if (this.pos > 0) {
+                                
+                                 var prevPage = this.items[this.pos - 1];
+                                 prevPage.swipey += e.detail.ddy;
+                                 prevPage.classList.add('swipe-next');
+                                 prevPage.classList.add('swipe-page');
+                                 prevPage.style.transitionDuration = "0ms";
+                                 prevPage.style.transform = "translateY(" + String(prevPage.swipey) + "px)";
+                            }
+                        }
+                       
                         break;
 
                     case 'end':
 
+                        console.log('end of swipe ', page.id, this._up, this._down, e.timeStamp);
+                        console.log('tdiff ', e.timeStamp - this._lastts);
+                        
+                        // if holds reset _up, _down
                         this._lastts = this._lastts || e.timeStamp;
-                        //console.log('end of page ', page.id, this._up, this._down);
+                        page.style.transitionTimingFunction = 'ease-in';
+                        var tr;
+                        
                         if (Math.abs(this._up - this._down) < 5) {
-                            this.returnToStart(page);
-                        } else if (this._up > 0) {
-                            if (this.pos < this.items.length - 1) {
-                                this.pageUp(page);
-                            } else {
-                                console.log('no next page so restore');
-                                this.returnToStart(page);
-                            }
-                        } else {
                             if (this.pos > 0) {
-                                console.log('swipe down');
-                                this.pageDown(page);
-                 
+                                var prevPage = this.items[this.pos - 1];
+                                this.returnToStart(prevPage);
+                            } 
+                            this.returnToStart(page);   
+                        } else if ((e.timeStamp - this._lastts) > 100) {
+                            console.log('final hold ');
+                             if (this.pos > 0) {
+                                var prevPage = this.items[this.pos - 1];
+                                this.returnToStart(prevPage);
+                            } 
+                            this.returnToStart(page);
+                        } else {
+                            console.log('\ndo final transition');
+                            if (this._up > 0) {
+                                if (this.pos < this.items.length - 1) {
+                                    console.log('select next');
+                                    this.selectNext();
+                                } else {
+                                    this.returnToStart(page);
+                                }
                             } else {
-                                console.log('no prev page so restore');
-                                this.returnToStart(page);
+                                if (this.pos > 0) {
+                                    var prevPage = this.items[this.pos - 1];
+                                    console.log('select prev');
+                                    this.selectPrevious();
+                                } else {
+                                    this.returnToStart(page);
+                                }
                             }
                         }
                         e.preventDefault();
