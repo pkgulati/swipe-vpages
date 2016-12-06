@@ -73,7 +73,7 @@ container element based on iron pages to support vertical swipe
                     //                    value: 'cubic-bezier(0.4, 0.0, 0.2, 1)'
                     //value : 'cubic-bezier(0.42,0,0.58,1)'
                     //value: 'ease-out'
-                    value: 'linear'
+                    value: 'ease-out'
                 },
                 transitionDuration: {
                     type: Number,
@@ -99,25 +99,39 @@ container element based on iron pages to support vertical swipe
                 this._upCount = 0;
                 this._downCount = 0;
             },
-            attached: function(e) {
-                this.zIndex = Number(this.getComputedStyleValue('z-index'));
-                var rect = this.getBoundingClientRect();
-                this.height = rect.bottom - rect.top;
-                var self = this;
+            _onItemsChanged : function(e) {
+                console.log('this.items ', this.items.length);
+               var self = this;
                 this.items.forEach(function(page, pos) {
                     page.style.zIndex = self.zIndex - pos;
-                    if (pos < 5) {
-                      page.style.transitionDuration = 0 + "ms";
-                      page.style.transform = "translateY(" + String(-this.height) + "px)";
-                    }
+                    //console.log('page ', page, self.zIndex - pos);
+                }); 
+                var rect = this.getBoundingClientRect();
+                this.height = 700;
+                console.log('height now ', this.height);
+            },
+            attached: function(e) {
+                this.zIndex = Number(this.getComputedStyleValue('z-index'));
+                if (isNaN(this.zIndex)) {
+                    this.zIndex = 0;
+                }
+                    
+                var rect = this.getBoundingClientRect();
+                this.height = rect.bottom - rect.top;
+                console.log('attached this.height ', this.height)
+                var self = this;
+                console.log('this.items 2 ', this.items.length);
+                this.height = 700;
+                this.items.forEach(function(page, pos) {
+                    page.style.zIndex = self.zIndex - pos;
                 });
-                this.select(5);
             },
             listeners: {
                 'iron-select': '_onIronSelect',
                 'track': '_onTrack',
                 'down' : '_onDown',
-                'tap': '_onTap'
+                'tap': '_onTap',
+                'iron-items-changed' : '_onItemsChanged'
             },
             returnToStart: function(page) {
                 console.log('returnToStart ', page.id);
@@ -182,17 +196,13 @@ container element based on iron pages to support vertical swipe
             },
             _onIronSelect: function(event) {
                 var page = event.detail.item;
-                console.log('selected page changed ', page.id);
                 var pos = this.items.indexOf(page);
                 if (pos < 0) {
                     return;
                 }
-                if (this.pos !== 1) {
-                    // TODO remove swipe page class
-                }
                 this.pos = pos;
+                console.log('selected page changed new page (make down)', this.pos);
                 this.swipeDown(page);
-                console.log('swipe down ', page.id);
                 // TODO remove swipe-next class from other pages
                 //page.style.zIndex = this.zIndex - pos;
                 /*if (pos < this.items.length - 1) {
@@ -202,13 +212,13 @@ container element based on iron pages to support vertical swipe
                 var self = this;
                 if (pos > 0) {
                     var prevPage = this.items[pos - 1];
-                    console.log('swipe up ', prevPage.id);
+                    console.log('swipe up ', pos-1);
                     prevPage.classList.remove('swipe-next');
                     this.swipeUp(prevPage);
                 }
                 if (pos < this.items.length - 1) {
                     var nextPage = this.items[pos + 1];
-                    console.log('swipe down ', nextPage.id);
+                    console.log('swipe down ', pos+1);
                     this.swipeDown(nextPage);
                 }
             },
@@ -218,6 +228,7 @@ container element based on iron pages to support vertical swipe
             },
             swipeUp : function(page) {
                 page.style.transitionDuration = this.transitionDuration + "ms";
+                console.log('this.height ', this.height);
                 page.style.transform = "translateY(" + String(-this.height) + "px)";
                 var self = this;
                 self.debounce('resetpages', function() {
@@ -235,10 +246,10 @@ container element based on iron pages to support vertical swipe
             _onTrack: function(e) {
                 var page = this.selectedItem;
                
-                //console.log('swipe ' , page.id, e.detail.state, e.detail.dy, e.detail.ddy);
+                
                 switch (e.detail.state) {
                     case 'start':
-                        
+                        console.log('swipe ' , this.pos, e.detail.state, e.detail.dy, e.detail.ddy);
                         this._lastddy = 0;
                         this._lastts = e.timeStamp;
                         this._up = 0;
@@ -251,10 +262,12 @@ container element based on iron pages to support vertical swipe
                         var rect1 = this.getBoundingClientRect();
                         var rect2 = page.getBoundingClientRect();
                         if (e.detail.dy < 0) {
+                            
                             this.showNextPage(this.pos);
                             page.swipey = rect2.top - rect1.top;
                             page.style.transitionDuration = "0ms";
                             page.style.transform = "translateY(" + String(page.swipey) + "px)";
+                            console.log('start ', page.swipey);
                         } else if (e.detail.dy > 0) {
                             this.showPreviousPage(this.pos);
                             if (this.pos > 0) {
@@ -290,7 +303,7 @@ container element based on iron pages to support vertical swipe
                         } else {
                             this._down += e.detail.ddy;
                         }
-                        console.log('track ', this._up, this._down, e.timeStamp - this._lastts);
+                        //console.log('track ', this._up, this._down, e.timeStamp - this._lastts);
                         this._lastts = e.timeStamp;
                         
                         if (e.detail.ddy === 0) {
@@ -317,7 +330,6 @@ container element based on iron pages to support vertical swipe
                         break;
 
                     case 'end':
-
                         console.log('end of swipe ', page.id, this._up, this._down, e.timeStamp - this._lastts);
                       
                         // if holds reset _up, _down
